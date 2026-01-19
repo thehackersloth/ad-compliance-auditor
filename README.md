@@ -232,12 +232,46 @@ See configuration menu for detailed setup instructions.
 - GroupPolicy module
 
 ### Installation
+
+#### Step 1: Set PowerShell Execution Policy
 ```powershell
+# Check current execution policy
+Get-ExecutionPolicy
+
+# Set execution policy to allow script execution (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# OR for all users (requires Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
+
+# If you get an error, you may need to run:
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+```
+
+**Note:** `RemoteSigned` allows local scripts to run and requires downloaded scripts to be signed. `Bypass` allows all scripts but is less secure.
+
+#### Step 2: Install Required Windows Features
+```powershell
+# Run PowerShell as Administrator
 # Install required Windows features
 Install-WindowsFeature RSAT-AD-PowerShell, RSAT-GP
 
 # Verify modules are available
 Get-Module -ListAvailable ActiveDirectory, GroupPolicy
+```
+
+#### Step 3: Verify Prerequisites
+```powershell
+# Check if you're running as Administrator
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+Write-Host "Running as Administrator: $isAdmin"
+
+# Test domain connectivity
+Get-ADDomain
+
+# Test Group Policy access
+Get-GPO -All | Select-Object -First 1
 ```
 
 ## Safety Features

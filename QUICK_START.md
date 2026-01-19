@@ -2,6 +2,21 @@
 
 ## Download & Run (30 seconds)
 
+### First Time Setup (One-Time)
+
+```powershell
+# 1. Set PowerShell execution policy (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# OR if you get errors:
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+# 2. Install required Windows features (run as Administrator)
+Install-WindowsFeature RSAT-AD-PowerShell, RSAT-GP
+```
+
+### Run the Script
+
 ```powershell
 # 1. Download/clone from GitHub
 git clone https://github.com/thehackersloth/ad-compliance-auditor.git
@@ -14,6 +29,11 @@ cd ad-compliance-auditor
 .\AD-Audit-Script.ps1 -ClientName "Client Name" -Framework HIPAA -AutoFix -AutoApplyStandardSettings
 
 # 3. Review reports in .\Reports\ folder
+```
+
+**Troubleshooting:** If you get "execution of scripts is disabled" error, run:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 ```
 
 ## That's It! ✅
