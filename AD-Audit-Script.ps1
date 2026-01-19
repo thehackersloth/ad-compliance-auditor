@@ -1900,9 +1900,13 @@ function Start-CMMCAudit {
     $mediumCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Medium" }).Count
     $lowCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Low" }).Count
     
+    # Calculate compliance score
+    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+    
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "CMMC Audit Complete!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Compliance Score: $($complianceScore.Percentage)% ($($complianceScore.Grade)) - $($complianceScore.Status)" -ForegroundColor $(if ($complianceScore.Percentage -ge 90) { 'Green' } elseif ($complianceScore.Percentage -ge 75) { 'Yellow' } else { 'Red' })
     Write-Host "Total Issues Found: $($script:AuditResults.Count)" -ForegroundColor White
     Write-Host "  High Severity: $highCount" -ForegroundColor Red
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
@@ -2016,9 +2020,13 @@ function Show-AuditSummary {
     $mediumCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Medium" }).Count
     $lowCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Low" }).Count
     
+    # Calculate compliance score
+    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+    
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "$Framework Audit Complete!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Compliance Score: $($complianceScore.Percentage)% ($($complianceScore.Grade)) - $($complianceScore.Status)" -ForegroundColor $(if ($complianceScore.Percentage -ge 90) { 'Green' } elseif ($complianceScore.Percentage -ge 75) { 'Yellow' } else { 'Red' })
     Write-Host "Total Issues Found: $($script:AuditResults.Count)" -ForegroundColor White
     Write-Host "  High Severity: $highCount" -ForegroundColor Red
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
@@ -3120,8 +3128,15 @@ function New-HTMLReport {
         <p>Generated: $reportDate</p>
     </div>
     
+    # Calculate compliance score
+    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+    
+    $html += @"
     <div class="summary">
         <h2>Executive Summary</h2>
+        <div class="summary-item" style="background: linear-gradient(90deg, #27ae60 0%, #27ae60 $($complianceScore.Percentage)%, #e74c3c $($complianceScore.Percentage)%, #e74c3c 100%); color: white; font-size: 24px; font-weight: bold; padding: 20px; margin-bottom: 15px; border-radius: 5px; text-align: center;">
+            Compliance Score: $($complianceScore.Percentage)% ($($complianceScore.Grade)) - $($complianceScore.Status)
+        </div>
         <div class="summary-item total">Total Issues: $totalIssues</div>
         <div class="summary-item high">High Severity: $highSeverity</div>
         <div class="summary-item medium">Medium Severity: $mediumSeverity</div>
