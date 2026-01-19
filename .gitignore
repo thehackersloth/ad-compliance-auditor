@@ -1,0 +1,30 @@
+# PowerShell modules
+*.psm1
+*.psd1
+
+# Reports and output
+Reports/
+Backups/
+AuditHistory.json
+*.html
+*.csv
+*.json
+!AD-Audit-Config.json.example
+
+# Configuration files (may contain secrets)
+AD-Audit-Config.json
+
+# Windows specific
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.log
+~$*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
