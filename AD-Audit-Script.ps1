@@ -3131,13 +3131,10 @@ function New-HTMLReport {
         <p>Generated: $reportDate</p>
     </div>
     
-    # Calculate compliance score
-    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
-    
     $html += @"
     <div class="summary">
         <h2>Executive Summary</h2>
-        <div class="summary-item" style="background: linear-gradient(90deg, #27ae60 0%, #27ae60 $($complianceScore.Percentage)%, #e74c3c $($complianceScore.Percentage)%, #e74c3c 100%); color: white; font-size: 24px; font-weight: bold; padding: 20px; margin-bottom: 15px; border-radius: 5px; text-align: center;">
+        <div class="summary-item" style="background: linear-gradient(90deg, #27ae60 0%, #27ae60 $($complianceScore.Percentage)%, #e74c3c $($complianceScore.Percentage)%, #e74c3c 100%); color: white; font-size: 24px; font-weight: bold; padding: 20px; margin-bottom: 15px; border-radius: 5px; text-align: center; width: 100%; display: block;">
             Compliance Score: $($complianceScore.Percentage)% ($($complianceScore.Grade)) - $($complianceScore.Status)
         </div>
         <div class="summary-item total">Total Issues: $totalIssues</div>
