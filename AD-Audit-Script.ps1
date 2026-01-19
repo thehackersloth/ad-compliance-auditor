@@ -3059,6 +3059,9 @@ function New-HTMLReport {
     $mediumSeverity = ($script:AuditResults | Where-Object { $_.Severity -eq "Medium" }).Count
     $lowSeverity = ($script:AuditResults | Where-Object { $_.Severity -eq "Low" }).Count
     
+    # Calculate compliance score
+    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+    
     $html = @"
 <!DOCTYPE html>
 <html>
