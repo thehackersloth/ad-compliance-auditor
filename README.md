@@ -239,16 +239,7 @@ Get-Module -ListAvailable ActiveDirectory, GroupPolicy
 - Verify GPO is linked and enforced
 - Review GPO backup/restore in config
 
-## Support
 
-For MSP support:
-- GitHub Issues: [Link to your repo issues]
-- Documentation: [Link to docs]
-- Email: [Your MSP support email]
-
-## License
-
-[Your License Here]
 
 ## Version History
 
