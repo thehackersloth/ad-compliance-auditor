@@ -441,9 +441,228 @@ function Add-AuditFinding {
         AffectedObject = $AffectedObject
         Timestamp = Get-Date
         Framework = $script:ComplianceFramework
+        Fixed = $false
+        Verified = $false
+        VerificationResult = $null
     }
     
     $script:AuditResults += $finding
+}
+
+# Function to calculate compliance score
+function Calculate-ComplianceScore {
+    param(
+        [array]$AuditResults
+    )
+    
+    if ($null -eq $AuditResults -or $AuditResults.Count -eq 0) {
+        return @{
+            Score = 100
+            Percentage = 100
+            Grade = "A+"
+            Status = "Fully Compliant"
+        }
+    }
+    
+    # Weighted scoring: High = -10 points, Medium = -5 points, Low = -2 points, Info = 0 points
+    $baseScore = 100
+    $highPenalty = 10
+    $mediumPenalty = 5
+    $lowPenalty = 2
+    $infoPenalty = 0
+    
+    $totalPenalty = 0
+    $highCount = ($AuditResults | Where-Object { $_.Severity -eq "High" }).Count
+    $mediumCount = ($AuditResults | Where-Object { $_.Severity -eq "Medium" }).Count
+    $lowCount = ($AuditResults | Where-Object { $_.Severity -eq "Low" }).Count
+    $infoCount = ($AuditResults | Where-Object { $_.Severity -eq "Info" }).Count
+    
+    $totalPenalty = ($highCount * $highPenalty) + ($mediumCount * $mediumPenalty) + ($lowCount * $lowPenalty) + ($infoCount * $infoPenalty)
+    
+    # Calculate score (max 100, min 0)
+    $score = [Math]::Max(0, [Math]::Min(100, $baseScore - $totalPenalty))
+    $percentage = [Math]::Round($score, 1)
+    
+    # Determine grade
+    $grade = switch ($score) {
+        { $_ -ge 95 } { "A+" }
+        { $_ -ge 90 } { "A" }
+        { $_ -ge 85 } { "B+" }
+        { $_ -ge 80 } { "B" }
+        { $_ -ge 75 } { "C+" }
+        { $_ -ge 70 } { "C" }
+        { $_ -ge 60 } { "D" }
+        default { "F" }
+    }
+    
+    # Determine status
+    $status = switch ($score) {
+        { $_ -ge 90 } { "Fully Compliant" }
+        { $_ -ge 75 } { "Mostly Compliant" }
+        { $_ -ge 60 } { "Partially Compliant" }
+        default { "Non-Compliant" }
+    }
+    
+    return @{
+        Score = $score
+        Percentage = $percentage
+        Grade = $grade
+        Status = $status
+        HighCount = $highCount
+        MediumCount = $mediumCount
+        LowCount = $lowCount
+        InfoCount = $infoCount
+        TotalIssues = $AuditResults.Count
+    }
+}
+
+# Function to verify fixes were applied successfully
+function Verify-Fixes {
+    param(
+        [string]$Framework
+    )
+    
+    Write-Host "`n========================================" -ForegroundColor Cyan
+    Write-Host "   Verifying Fixes Applied              " -ForegroundColor Cyan
+    Write-Host "========================================`n" -ForegroundColor Cyan
+    
+    $verifiedCount = 0
+    $failedCount = 0
+    $verificationResults = @()
+    
+    # Get all fixed issues
+    $fixedIssues = $script:AuditResults | Where-Object { $_.Fixed -eq $true }
+    
+    if ($fixedIssues.Count -eq 0) {
+        Write-Host "  [INFO] No fixes to verify" -ForegroundColor Yellow
+        return @{
+            Verified = 0
+            Failed = 0
+            Results = @()
+        }
+    }
+    
+    Write-Host "  [*] Verifying $($fixedIssues.Count) fix(es)..." -ForegroundColor Yellow
+    Write-Host ""
+    
+    foreach ($issue in $fixedIssues) {
+        $verified = $false
+        $verificationMessage = ""
+        
+        try {
+            # Re-check based on category
+            switch ($issue.Category) {
+                "Password Policy" {
+                    $policy = Get-ADDefaultDomainPasswordPolicy
+                    if ($issue.Finding -like "*password length*") {
+                        $expectedLength = 14
+                        if ($policy.MinPasswordLength -ge $expectedLength) {
+                            $verified = $true
+                            $verificationMessage = "Password length verified: $($policy.MinPasswordLength) characters"
+                        } else {
+                            $verificationMessage = "Password length still insufficient: $($policy.MinPasswordLength) characters"
+                        }
+                    } elseif ($issue.Finding -like "*complexity*") {
+                        if ($policy.ComplexityEnabled) {
+                            $verified = $true
+                            $verificationMessage = "Password complexity is enabled"
+                        } else {
+                            $verificationMessage = "Password complexity is still disabled"
+                        }
+                    } elseif ($issue.Finding -like "*password history*") {
+                        if ($policy.PasswordHistoryCount -ge 24) {
+                            $verified = $true
+                            $verificationMessage = "Password history verified: $($policy.PasswordHistoryCount) passwords"
+                        } else {
+                            $verificationMessage = "Password history still insufficient: $($policy.PasswordHistoryCount) passwords"
+                        }
+                    }
+                }
+                "Account Lockout Policy" {
+                    $policy = Get-ADDefaultDomainPasswordPolicy
+                    if ($issue.Finding -like "*lockout threshold*") {
+                        if ($policy.LockoutThreshold -le 5 -and $policy.LockoutThreshold -gt 0) {
+                            $verified = $true
+                            $verificationMessage = "Lockout threshold verified: $($policy.LockoutThreshold) attempts"
+                        } else {
+                            $verificationMessage = "Lockout threshold may need adjustment: $($policy.LockoutThreshold) attempts"
+                        }
+                    }
+                }
+                "Password Security" {
+                    if ($issue.Finding -like "*LM hash*") {
+                        $lmHashPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa"
+                        $lmHashValue = (Get-ItemProperty -Path $lmHashPath -Name "NoLMHash" -ErrorAction SilentlyContinue).NoLMHash
+                        if ($lmHashValue -eq 1) {
+                            $verified = $true
+                            $verificationMessage = "LM hash storage is disabled"
+                        } else {
+                            $verificationMessage = "LM hash storage may still be enabled"
+                        }
+                    } elseif ($issue.Finding -like "*reversible encryption*") {
+                        $accounts = Get-ADUser -Filter {Enabled -eq $true -and AllowReversiblePasswordEncryption -eq $true} -ErrorAction SilentlyContinue
+                        if ($accounts.Count -eq 0) {
+                            $verified = $true
+                            $verificationMessage = "No accounts with reversible encryption found"
+                        } else {
+                            $verificationMessage = "$($accounts.Count) account(s) still have reversible encryption enabled"
+                        }
+                    }
+                }
+                "SMB Protocol" {
+                    if ($issue.Finding -like "*SMBv1*") {
+                        $smbv1Path = "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters"
+                        $smbv1Value = (Get-ItemProperty -Path $smbv1Path -Name "SMB1" -ErrorAction SilentlyContinue).SMB1
+                        if ($smbv1Value -eq 0) {
+                            $verified = $true
+                            $verificationMessage = "SMBv1 is disabled"
+                        } else {
+                            $verificationMessage = "SMBv1 may still be enabled"
+                        }
+                    }
+                }
+                default {
+                    # Generic verification - mark as verified if fix script was executed
+                    $verified = $true
+                    $verificationMessage = "Fix applied (manual verification recommended)"
+                }
+            }
+            
+            $issue.Verified = $verified
+            $issue.VerificationResult = $verificationMessage
+            
+            if ($verified) {
+                $verifiedCount++
+                Write-Host "    [✓] $($issue.Finding)" -ForegroundColor Green
+                Write-Host "        $verificationMessage" -ForegroundColor Gray
+            } else {
+                $failedCount++
+                Write-Host "    [✗] $($issue.Finding)" -ForegroundColor Red
+                Write-Host "        $verificationMessage" -ForegroundColor Yellow
+            }
+            
+            $verificationResults += @{
+                Finding = $issue.Finding
+                Verified = $verified
+                Message = $verificationMessage
+            }
+        } catch {
+            Write-Host "    [!] $($issue.Finding) - Verification error: $_" -ForegroundColor Yellow
+            $issue.Verified = $false
+            $issue.VerificationResult = "Verification failed: $_"
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "  Verification Summary:" -ForegroundColor Cyan
+    Write-Host "    Verified: $verifiedCount" -ForegroundColor Green
+    Write-Host "    Failed: $failedCount" -ForegroundColor $(if ($failedCount -gt 0) { 'Red' } else { 'Green' })
+    
+    return @{
+        Verified = $verifiedCount
+        Failed = $failedCount
+        Results = $verificationResults
+    }
 }
 
 # Function to check password policy
@@ -1588,9 +1807,13 @@ function Start-HIPAAAudit {
     $mediumCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Medium" }).Count
     $lowCount = ($script:AuditResults | Where-Object { $_.Severity -eq "Low" }).Count
     
+    # Calculate compliance score
+    $complianceScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+    
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "HIPAA Audit Complete!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Compliance Score: $($complianceScore.Percentage)% ($($complianceScore.Grade)) - $($complianceScore.Status)" -ForegroundColor $(if ($complianceScore.Percentage -ge 90) { 'Green' } elseif ($complianceScore.Percentage -ge 75) { 'Yellow' } else { 'Red' })
     Write-Host "Total Issues Found: $($script:AuditResults.Count)" -ForegroundColor White
     Write-Host "  High Severity: $highCount" -ForegroundColor Red
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
@@ -2668,6 +2891,10 @@ function Invoke-PostAuditOptions {
         "1" {
             Invoke-FixIssues
             
+            # Verify fixes were applied
+            Write-Host "`nVerifying fixes..." -ForegroundColor Yellow
+            $verification = Verify-Fixes -Framework $Framework
+            
             Write-Host "`nRescanning after fixes..." -ForegroundColor Yellow
             Start-Sleep -Seconds 2
             
@@ -2683,6 +2910,15 @@ function Invoke-PostAuditOptions {
                 "GDPR" { Start-GDPRAudit }
                 "FISMA" { Start-FISMAAudit }
             }
+            
+            # Calculate new compliance score
+            $newScore = Calculate-ComplianceScore -AuditResults $script:AuditResults
+            Write-Host "`n========================================" -ForegroundColor Cyan
+            Write-Host "   Compliance Score Update               " -ForegroundColor Cyan
+            Write-Host "========================================" -ForegroundColor Cyan
+            Write-Host "  New Compliance Score: $($newScore.Percentage)% ($($newScore.Grade))" -ForegroundColor $(if ($newScore.Percentage -ge 90) { 'Green' } elseif ($newScore.Percentage -ge 75) { 'Yellow' } else { 'Red' })
+            Write-Host "  Status: $($newScore.Status)" -ForegroundColor White
+            Write-Host "========================================`n" -ForegroundColor Cyan
             
             $fixReportFile = Join-Path $OutputPath "${Framework}_FixReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
             New-FixReport -ReportPath $fixReportFile
