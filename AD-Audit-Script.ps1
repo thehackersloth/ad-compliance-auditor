@@ -3596,7 +3596,7 @@ function Fix-CloudServiceSettings {
                         try {
                             $enableBody = @{ isEnabled = $true }
                             $result = Invoke-MicrosoftGraph -Method PATCH -Endpoint "policies/identitySecurityDefaultsEnforcementPolicy" -Body $enableBody
-                            if ($result -or ($result -eq $null)) {
+                            if ($result -or ($null -eq $result)) {
                                 $fixed++
                                 if (-not $Silent) {
                                     Write-Host "    [OK] Enabled Microsoft 365 Security Defaults" -ForegroundColor Green
@@ -3640,7 +3640,7 @@ function Fix-CloudServiceSettings {
                     try {
                         $enableBody = @{ isEnabled = $true }
                         $result = Invoke-MicrosoftGraph -Method PATCH -Endpoint "policies/identitySecurityDefaultsEnforcementPolicy" -Body $enableBody
-                        if ($result -or ($result -eq $null)) {
+                        if ($result -or ($null -eq $result)) {
                             $fixed++
                             if (-not $Silent) {
                                 Write-Host "    [OK] Enabled Microsoft 365 Security Defaults" -ForegroundColor Green
