@@ -4,10 +4,13 @@
 
 ```powershell
 # 1. Download/clone from GitHub
-git clone https://github.com/yourorg/ad-compliance-auditor.git
+git clone https://github.com/thehackersloth/ad-compliance-auditor.git
 cd ad-compliance-auditor
 
-# 2. Run automated audit & fix for client
+# 2. Run with interactive menu (EASIEST - Recommended)
+.\AD-Audit-Script.ps1
+
+# OR run automated audit & fix for client
 .\AD-Audit-Script.ps1 -ClientName "Client Name" -Framework HIPAA -AutoFix -AutoApplyStandardSettings
 
 # 3. Review reports in .\Reports\ folder
@@ -76,3 +79,5 @@ All reports saved to: `.\Reports\`
 ## Need Help?
 
 See README.md for detailed documentation.
+
+For issues, feature requests, or contributions, visit: https://github.com/thehackersloth/ad-compliance-auditor

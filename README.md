@@ -9,15 +9,29 @@ This script automatically audits and fixes 90% of common compliance issues acros
 ### 1. Download from GitHub
 ```powershell
 # Clone the repository
-git clone https://github.com/yourorg/ad-compliance-auditor.git
+git clone https://github.com/thehackersloth/ad-compliance-auditor.git
 cd ad-compliance-auditor
 
 # Or download ZIP and extract
 ```
 
-### 2. Run Per Client (Recommended Workflow)
+### 2. Run Per Client (Interactive Menu - Recommended)
 
-#### Option A: Automated Run & Fix (90% Automation)
+**Easiest way - just run the script:**
+```powershell
+.\AD-Audit-Script.ps1
+```
+
+The interactive menu will guide you through:
+- Setting client name
+- Selecting compliance framework
+- Reviewing findings
+- Applying fixes automatically
+- Generating reports
+
+### 2b. Automated Workflow (Advanced)
+
+Automated command-line mode (for scripting/automation):
 ```powershell
 # Run with auto-fix for specific framework
 .\AD-Audit-Script.ps1 -ClientName "Acme Corporation" -Framework HIPAA -AutoFix -AutoApplyStandardSettings
@@ -26,18 +40,7 @@ cd ad-compliance-auditor
 .\AD-Audit-Script.ps1 -ClientName "Acme Corporation" -Framework ALL -AutoFix -AutoApplyStandardSettings
 ```
 
-#### Option B: Interactive Menu (Step-by-Step)
-```powershell
-# 1. Set client name first
-.\AD-Audit-Script.ps1 -ClientName "Acme Corporation"
-
-# 2. Follow menu prompts
-#    - Select compliance framework
-#    - Review findings
-#    - Choose: Apply standard settings + GPO
-```
-
-#### Option C: Quick Audit Only (No Fixes)
+### 2c. Quick Audit Only (No Fixes)
 ```powershell
 .\AD-Audit-Script.ps1 -ClientName "Acme Corporation" -Framework HIPAA -AuditOnly
 ```
@@ -48,12 +51,44 @@ All reports are saved to `.\Reports\` with client name prefix:
 - `Acme_Corporation_HIPAA_Audit_20240115_143022.csv`
 - `Acme_Corporation_HIPAA_Audit_20240115_143022.json`
 
-## Command Line Parameters
+## Interactive Menu Guide
 
-### Required
-- `-ClientName` - Client name for this session (e.g., "Acme Corporation")
+When you run the script without parameters, you'll see an interactive menu:
 
-### Optional
+```
+═══════════════════════════════════════════════════════════════
+      Active Directory Compliance Auditor                    
+      Automated Audit & Remediation (90%+ Automation)        
+═══════════════════════════════════════════════════════════════
+
+  COMPLIANCE FRAMEWORK AUDITS
+   1.  HIPAA Compliance Audit (Healthcare)
+   2.  CMMC Compliance Audit (DoD Contractors)
+   3.  NIST/CIS Baseline Audit (General Security)
+   4.  GLBA Audit (Financial Institutions)
+   5.  SOX Audit (Public Companies)
+   6.  PCI-DSS Audit (Payment Card Industry)
+   7.  GDPR Audit (Data Privacy)
+   8.  FISMA Audit (Federal Systems)
+
+  TOOLS & OPTIONS
+   9.  Configuration Menu (Enable/Disable Checks)
+   10. Set Client Name
+   11. View Audit History & Compare Reports
+   12. Export Reports (CSV/JSON)
+   13. Exit
+```
+
+### Menu Workflow:
+1. **Option 10**: Set client name first (recommended)
+2. **Option 1-8**: Select compliance framework to audit
+3. After audit: Choose to apply fixes automatically
+4. **Option 11**: Review audit history and compare results
+5. **Option 12**: Export reports for ticketing systems
+
+## Command Line Parameters (For Automation)
+
+### Optional Parameters
 - `-Framework` - Compliance framework: `HIPAA`, `CMMC`, `NIST`, `GLBA`, `SOX`, `PCI`, `GDPR`, `FISMA`, or `ALL`
 - `-AutoFix` - Automatically fix issues without prompts (requires `-AutoApplyStandardSettings`)
 - `-AutoApplyStandardSettings` - Apply standard compliance settings for selected framework
@@ -238,8 +273,6 @@ Get-Module -ListAvailable ActiveDirectory, GroupPolicy
 - Check GPO refresh: `gpupdate /force` on target systems
 - Verify GPO is linked and enforced
 - Review GPO backup/restore in config
-
-
 
 ## Version History
 

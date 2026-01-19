@@ -376,31 +376,46 @@ if ($Framework -and $Framework -ne "") {
     exit 0
 }
 
-# Function to display menu
+# Function to display interactive menu
 function Show-Menu {
     Clear-Host
-    Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "   Active Directory Compliance Auditor  " -ForegroundColor Cyan
-    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║                                                              ║" -ForegroundColor Cyan
+    Write-Host "║      Active Directory Compliance Auditor                    ║" -ForegroundColor Cyan
+    Write-Host "║      Automated Audit & Remediation (90%+ Automation)        ║" -ForegroundColor Cyan
+    Write-Host "║                                                              ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Current Client: $(if ($script:ClientName) { $script:ClientName } else { 'Not Set - Option 10 to Set' })" -ForegroundColor $(if ($script:ClientName) { 'Green' } else { 'Yellow' })
+    Write-Host "  Current Session Info:" -ForegroundColor Yellow
+    Write-Host "  ├─ Client: $(if ($script:ClientName) { $script:ClientName } else { 'Not Set' })" -ForegroundColor $(if ($script:ClientName) { 'Green' } else { 'Yellow' })
+    Write-Host "  └─ Domain: $script:DomainName" -ForegroundColor White
     Write-Host ""
-    Write-Host "Select Compliance Framework:" -ForegroundColor Yellow
-    Write-Host "1. HIPAA Compliance Audit" -ForegroundColor White
-    Write-Host "2. CMMC Compliance Audit" -ForegroundColor White
-    Write-Host "3. NIST/CIS Baseline Audit" -ForegroundColor White
-    Write-Host "4. GLBA (Gramm-Leach-Bliley Act) Audit" -ForegroundColor White
-    Write-Host "5. SOX (Sarbanes-Oxley) Audit" -ForegroundColor White
-    Write-Host "6. PCI-DSS Compliance Audit" -ForegroundColor White
-    Write-Host "7. GDPR Compliance Audit" -ForegroundColor White
-    Write-Host "8. FISMA Compliance Audit" -ForegroundColor White
-    Write-Host "9. Configuration Menu (Opt-In/Opt-Out Checks)" -ForegroundColor Cyan
-    Write-Host "10. Set Client Name (for current session)" -ForegroundColor Cyan
-    Write-Host "11. View Audit History / Compare Reports" -ForegroundColor Cyan
-    Write-Host "12. Export Reports (CSV/JSON)" -ForegroundColor Cyan
-    Write-Host "13. Exit" -ForegroundColor White
+    Write-Host "  ┌──────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │  COMPLIANCE FRAMEWORK AUDITS                             │" -ForegroundColor Cyan
+    Write-Host "  └──────────────────────────────────────────────────────────┘" -ForegroundColor Cyan
     Write-Host ""
-    $choice = Read-Host "Enter your choice (1-13)"
+    Write-Host "   1.  HIPAA Compliance Audit (Healthcare)" -ForegroundColor White
+    Write-Host "   2.  CMMC Compliance Audit (DoD Contractors)" -ForegroundColor White
+    Write-Host "   3.  NIST/CIS Baseline Audit (General Security)" -ForegroundColor White
+    Write-Host "   4.  GLBA Audit (Financial Institutions)" -ForegroundColor White
+    Write-Host "   5.  SOX Audit (Public Companies)" -ForegroundColor White
+    Write-Host "   6.  PCI-DSS Audit (Payment Card Industry)" -ForegroundColor White
+    Write-Host "   7.  GDPR Audit (Data Privacy)" -ForegroundColor White
+    Write-Host "   8.  FISMA Audit (Federal Systems)" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  ┌──────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "  │  TOOLS & OPTIONS                                         │" -ForegroundColor Cyan
+    Write-Host "  └──────────────────────────────────────────────────────────┘" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "   9.  Configuration Menu (Enable/Disable Checks)" -ForegroundColor Yellow
+    Write-Host "   10. Set Client Name" -ForegroundColor Yellow
+    Write-Host "   11. View Audit History & Compare Reports" -ForegroundColor Yellow
+    Write-Host "   12. Export Reports (CSV/JSON)" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "   13. Exit" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    $choice = Read-Host "  Enter your choice (1-13)"
     return $choice
 }
 
@@ -3754,6 +3769,7 @@ function Start-AuditProcess {
         
         switch ($choice) {
             "1" {
+                Write-Host "`n" -NoNewline
                 Start-HIPAAAudit
                 $reportFile = Join-Path $OutputPath "HIPAA_Audit_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
                 if ($script:ClientName) {
@@ -3763,9 +3779,12 @@ function Start-AuditProcess {
                 New-HTMLReport -ReportPath $reportFile
                 Save-AuditToHistory -Framework "HIPAA" -ReportPath $reportFile
                 
+                Write-Host "`nReport saved: $reportFile" -ForegroundColor Green
+                Write-Host ""
+                
                 Invoke-PostAuditOptions -Framework "HIPAA"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "2" {
@@ -3780,7 +3799,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "CMMC"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "3" {
@@ -3795,7 +3814,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "NIST/CIS"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "4" {
@@ -3810,7 +3829,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "GLBA"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "5" {
@@ -3825,7 +3844,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "SOX"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "6" {
@@ -3840,7 +3859,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "PCI-DSS"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "7" {
@@ -3855,7 +3874,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "GDPR"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "8" {
@@ -3870,7 +3889,7 @@ function Start-AuditProcess {
                 
                 Invoke-PostAuditOptions -Framework "FISMA"
                 
-                Write-Host "`nPress any key to continue..."
+                Write-Host "`nPress any key to return to main menu..."
                 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
             }
             "9" {
