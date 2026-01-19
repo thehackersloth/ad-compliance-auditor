@@ -28,7 +28,8 @@ param(
     [switch]$AutoFix = $false,
     [switch]$AutoApplyStandardSettings = $false,
     [switch]$AuditOnly = $false,
-    [switch]$Silent = $false
+    [switch]$Silent = $false,
+    [string]$LogPath = ".\Logs"
 )
 
 # Ensure ActiveDirectory module is loaded
@@ -61,6 +62,9 @@ $script:AuditHistoryPath = ".\AuditHistory.json"
 $script:GraphToken = $null
 $script:GoogleToken = $null
 $script:GoogleServiceAccount = $null
+$script:LogPath = $LogPath
+$script:LogFile = $null
+$script:AuditStartTime = $null
 
 # Default configuration for optional checks
 $script:DefaultConfig = @{
@@ -159,6 +163,56 @@ if (-not (Test-Path $OutputPath)) {
 if (-not (Test-Path $script:BackupPath)) {
     New-Item -ItemType Directory -Path $script:BackupPath -Force | Out-Null
 }
+if (-not (Test-Path $script:LogPath)) {
+    New-Item -ItemType Directory -Path $script:LogPath -Force | Out-Null
+}
+
+# Initialize logging
+function Initialize-Logging {
+    $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+    $logFileName = "AD-Compliance-Audit_$timestamp.log"
+    $script:LogFile = Join-Path $script:LogPath $logFileName
+    
+    # Create log file
+    "========================================" | Out-File -FilePath $script:LogFile -Encoding UTF8
+    "Active Directory Compliance Auditor" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    "Log Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    "========================================" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    "" | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    
+    if (-not $Silent) {
+        Write-Host "Logging to: $script:LogFile" -ForegroundColor Cyan
+    }
+}
+
+# Function to write to log
+function Write-Log {
+    param(
+        [string]$Message,
+        [string]$Level = "INFO"
+    )
+    
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logEntry = "[$timestamp] [$Level] $Message"
+    
+    if ($script:LogFile) {
+        $logEntry | Out-File -FilePath $script:LogFile -Append -Encoding UTF8
+    }
+    
+    # Also write to console based on level
+    switch ($Level) {
+        "ERROR" { if (-not $Silent) { Write-Host $Message -ForegroundColor Red } }
+        "WARNING" { if (-not $Silent) { Write-Host $Message -ForegroundColor Yellow } }
+        "SUCCESS" { if (-not $Silent) { Write-Host $Message -ForegroundColor Green } }
+        default { if (-not $Silent) { Write-Host $Message } }
+    }
+}
+
+# Initialize logging on startup
+Initialize-Logging
+Write-Log "Script started" "INFO"
+Write-Log "Client: $(if ($script:ClientName) { $script:ClientName } else { 'Not Set' })" "INFO"
+Write-Log "Domain: $script:DomainName" "INFO"
 
 # Load or initialize configuration
 function Initialize-Config {
@@ -1729,7 +1783,9 @@ function Invoke-OptionalCheck {
 function Start-HIPAAAudit {
     $script:ComplianceFramework = "HIPAA"
     $script:AuditResults = @()
+    $script:AuditStartTime = Get-Date
     
+    Write-Log "Starting HIPAA Compliance Audit" "INFO"
     Write-Host "`n========================================" -ForegroundColor Cyan
     Write-Host "Starting HIPAA Compliance Audit..." -ForegroundColor Green
     Write-Host "========================================`n" -ForegroundColor Cyan
@@ -1819,6 +1875,9 @@ function Start-HIPAAAudit {
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
     Write-Host "  Low Severity: $lowCount" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
+    
+    $duration = (Get-Date) - $script:AuditStartTime
+    Write-Log "HIPAA Audit Complete - Score: $($complianceScore.Percentage)% - Duration: $($duration.ToString('mm\:ss'))" "SUCCESS"
 }
 
 # Function to run CMMC audit
@@ -1912,6 +1971,9 @@ function Start-CMMCAudit {
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
     Write-Host "  Low Severity: $lowCount" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
+    
+    $duration = (Get-Date) - $script:AuditStartTime
+    Write-Log "HIPAA Audit Complete - Score: $($complianceScore.Percentage)% - Duration: $($duration.ToString('mm\:ss'))" "SUCCESS"
 }
 
 # Helper function to run all optional checks
@@ -2032,6 +2094,9 @@ function Show-AuditSummary {
     Write-Host "  Medium Severity: $mediumCount" -ForegroundColor Yellow
     Write-Host "  Low Severity: $lowCount" -ForegroundColor Cyan
     Write-Host "========================================`n" -ForegroundColor Cyan
+    
+    $duration = (Get-Date) - $script:AuditStartTime
+    Write-Log "HIPAA Audit Complete - Score: $($complianceScore.Percentage)% - Duration: $($duration.ToString('mm\:ss'))" "SUCCESS"
 }
 
 # Function to run NIST/CIS audit
@@ -3004,6 +3069,10 @@ function Invoke-PostAuditOptions {
             }
         }
         "5" {
+            # Export remediation scripts
+            Export-RemediationScripts -Framework $Framework
+        }
+        "6" {
             # Return to main menu - do nothing
         }
         default {
